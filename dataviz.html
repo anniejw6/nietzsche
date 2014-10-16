@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<head>
+<!-- Based on http://bl.ocks.org/weiglemc/6185069 -->
+<title> Mapping Nietzsche </title>
+<style>
+body {
+  font: 12px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.dot {
+   stroke: #FFF;
+}
+
+.tooltip {
+  position: absolute;
+  width: 200px;
+  height: 28px;
+  pointer-events: none;
+}
+</style>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+</head>
+<body>
+<h1>Mapping Nietzsche</h1>
+
+In Chapter 4 of <em>Beyond Good and Evil</em>, Friedrich Nietzsche offers the reader a list of 123 "epigrams and interludes." 
+
+<div class = 'container'> </div>
+<script>
+var margin = {top: 20, right: 20, bottom: 30, left: 40},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var rsize = 5;
+/* 
+ * value accessor - returns the value to encode for a given data object.
+ * scale - maps value to a visual display encoding, such as a pixel position.
+ * map function - maps from data value to display value
+ * axis - sets up axis
+ */ 
+
+// setup x 
+var xValue = function(d) { return d.X1;}, // data -> value
+    xScale = d3.scale.linear().range([0, width]), // value -> display
+    xMap = function(d) { return xScale(xValue(d));}, // data -> display
+    xAxis = d3.svg.axis().scale(xScale).orient("bottom");
+
+// setup y
+var yValue = function(d) { return d.X2;}, // data -> value
+    yScale = d3.scale.linear().range([height, 0]), // value -> display
+    yMap = function(d) { return yScale(yValue(d));}, // data -> display
+    yAxis = d3.svg.axis().scale(yScale).orient("left");
+
+// setup fill color
+var cValue = function(d) { return d.clust10;},
+    color = d3.scale.category10();
+
+// add the graph canvas to the body of the webpage
+var svg = d3.select("div.container").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  	.append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+// add the tooltip area to the webpage
+var tooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+
+// load data
+d3.csv("results.csv", function(error, data) {
+
+  // change string (from CSV) into number format
+  data.forEach(function(d) {
+    d.X1 = +d.X1;
+    d.X2 = +d.X2;
+  //  console.log(d);
+  });
+
+  // don't want dots overlapping axis, so add in buffer to data domain
+  xScale.domain([d3.min(data, xValue)-1, d3.max(data, xValue)+1]);
+  yScale.domain([d3.min(data, yValue)-1, d3.max(data, yValue)+1]);
+
+//  // x-axis
+//  svg.append("g")
+//      .attr("class", "x axis")
+//      .attr("transform", "translate(0," + height + ")")
+//      .call(xAxis)
+//    .append("text")
+//      .attr("class", "label")
+//      .attr("x", width)
+//      .attr("y", -6)
+//      .style("text-anchor", "end")
+//      .text("X1");
+//
+//  // y-axis
+//  svg.append("g")
+//      .attr("class", "y axis")
+//      .call(yAxis)
+//    .append("text")
+//      .attr("class", "label")
+//      .attr("transform", "rotate(-90)")
+//      .attr("y", 6)
+//      .attr("dy", ".71em")
+//      .style("text-anchor", "end")
+//      .text("Protein (g)");
+
+  // draw dots
+  svg.selectAll(".dot")
+      .data(data)
+    .enter().append("circle")
+      .attr("class", "dot")
+      .attr("r", rsize)
+      .attr("cx", xMap)
+      .attr("cy", yMap)
+      .style("fill", function(d) { return color(cValue(d));}) 
+      .on("mouseover", function(d) {
+        	tooltip.transition()
+               	.duration(500)
+               	.style("opacity", 1);
+          	tooltip.html(d["text"] + " (" + (+d["name"] + 62) + ")")
+               	.style("left", (parseInt(d3.select(this).attr("cx")) + 60) + "px")
+               	.style("top", (d3.event.pageY - 28) + "px");
+            // specify selceted circle
+			d3.select(this).attr("class", "selected")
+				.transition(200)
+				.attr("r", 7)
+				.style("opacity", 1);
+			d3.selectAll(".dot").transition()
+				.duration(500)
+				.style("opacity", 0.17);
+
+      })
+      .on("mouseout", function(d) {
+          	tooltip.transition()
+               	.duration(100)
+               	.style("opacity", 0);
+            d3.select(this)
+            	.attr("class", "dot")
+            	.attr("r", rsize);
+			d3.selectAll(".dot").transition()
+				.duration(1000)
+				.style("opacity", 1);
+    //     	svg.selectAll(".dot").transition()
+    //			.duration(500)
+    //			.style("opacity", 1);
+      });
+
+
+});
+
+</script>
+</body>
+</html>
