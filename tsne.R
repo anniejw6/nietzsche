@@ -25,8 +25,14 @@ x$name <- text$names
 
 #### Clustering  ####
 
-cluster <- hclust(dist(x[, 1:2]), method = 'ward')
-clustering <- cutree(cluster, k=20) # 10 clusters is arbitrary
+cluster <- hclust(dist(x[, 1:2]), method = 'ward.D')
+
+
+for(i in c(5, 10, 15, 20)){
+  clustering <- cutree(cluster, k=i)
+  x[paste0('clust', i)] <- clustering
+}
+
 names(clustering) <- text$names
 
 # display our clusters nicely
