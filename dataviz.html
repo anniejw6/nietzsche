@@ -9,8 +9,11 @@
 <style>
 
 html {
-    margin-left: 10%;
-    margin-right:10%;
+    margin-left: 12.5%;
+    margin-right:12.5%;
+    margin-bottom:50px;
+    margin-top:10px;
+    background-color: white;
 }
 
 body {
@@ -20,6 +23,7 @@ body {
 svg {
   display: block;
   margin: 0 auto;
+  background-color:#F6F6F5;
 }
 .tooltip {
   position: absolute;
@@ -48,7 +52,7 @@ svg {
 <p>I used the R packages <a href = 'http://cran.r-project.org/web/packages/tm/index.html'><code>tm</code></a> for parsing and <a href = 'http://cran.r-project.org/web/packages/tsne/index.html'><code>tsne</code></a> for dimensonality reduction. The list of aphorisms can be found at <a href = 'http://users.compaqnet.be/cn127103/Nietzsche_beyond_good_and_evil/bge_ch4_maxims-and-interludes.htm'>Nietzsche's Features</a>, which might be the only instance of a Nietzsche bibliography displayed in Comic Sans. Code and data are available on <a href = 'https://github.com/anniejw6/nietzsche'>GitHub</a>.</p>
 
 <script>
-var margin = {top: 20, right: 20, bottom: 30, left: 40},
+var margin = {top: 30, right: 40, bottom: 30, left: 20},
     width = parseInt(d3.select('div.container').style('width'), 10),
     width = width - margin.left - margin.right,
     height = 0.625 * width - margin.top - margin.bottom;
