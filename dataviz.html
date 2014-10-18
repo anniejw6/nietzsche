@@ -25,13 +25,13 @@ svg {
   margin: 0 auto;
   background-color:#F6F6F5;
 }
+
 .tooltip {
   position: absolute;
-  width: 200px;
-  height: 28px;
+  height: 150px;
+  width: 175px;
   pointer-events: none;
   font: 11px sans-serif;
-  font-color: 'green';
 }
 
 </style>
@@ -43,8 +43,11 @@ svg {
 
 <p>In <em>Beyond Good and Evil</em>, Friedrich Nietzsche includes a list of one hundred and twenty-three "Epigrams and Interludes." This graph shows those aphorisms mapped onto a two-dimensonal space. The coordinates are arbitrary, but the distance between each of the points indicates their similarity. The color of each aphorism (represented by its number) represents the cluster to which it belongs. Move your mouse over the number to display the full text of the aphorism.</p>
 
-<div class = 'container'> </div>
+<div id="search_section" class="control">
+<p class="search_title">Search <input type="text" class="text-input" id="search" value=""/></p>
+</div>
 
+<div class = 'container'> </div>
 <h4>Methodology</h4>
 <p>I began by parsing each aphorism and creating a word-frequency matrix, in which each row is an aphorism, each column a word, and each cell the number of times the word appears in the aphorism. Then, I calculate the tf-idf (term frequency–inverse document frequency), which measures the frequency of the word in each aphorism inversely weighted by how many times the word appears across all of the aphorisms. This results in a 123 x 633 matrix of aphorisms and words. I applied t-SNE (t-distributed stochastic neighbors embedding) for dimensonality reduction and used hiearchical clustering to create the colored groups.</p>
 
@@ -52,8 +55,11 @@ svg {
 <p>I used the R packages <a href = 'http://cran.r-project.org/web/packages/tm/index.html'><code>tm</code></a> for parsing and <a href = 'http://cran.r-project.org/web/packages/tsne/index.html'><code>tsne</code></a> for dimensonality reduction. The list of aphorisms can be found at <a href = 'http://users.compaqnet.be/cn127103/Nietzsche_beyond_good_and_evil/bge_ch4_maxims-and-interludes.htm'>Nietzsche's Features</a>, which might be the only instance of a Nietzsche bibliography displayed in Comic Sans. Code and data are available on <a href = 'https://github.com/anniejw6/nietzsche'>GitHub</a>.</p>
 
 <script>
-var margin = {top: 30, right: 40, bottom: 30, left: 20},
-    width = parseInt(d3.select('div.container').style('width'), 10),
+
+var oSmall = 0.17
+
+var width = parseInt(d3.select('div.container').style('width'), 10),
+    margin = {top: width * 0.05, right: width * 0.05, bottom: width * 0.05, left: width * 0.025},
     width = width - margin.left - margin.right,
     height = 0.625 * width - margin.top - margin.bottom;
 
@@ -83,63 +89,83 @@ var tooltip = d3.select("body").append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 
-
 // load data
-d3.csv("results.csv", function(error, data) {
+d3.csv("results.csv", function (error, data) {
 
-  // change string (from CSV) into number format
-  data.forEach(function(d) {
-    d.X1 = +d.X1;
-    d.X2 = +d.X2;
-  //  console.log(d);
-  });
+    // change string (from CSV) into number format
+    data.forEach(function (d) {
+        d.X1 = +d.X1;
+        d.X2 = +d.X2;
+        //  console.log(d);
+    });
 
-  // don't want dots overlapping axis, so add in buffer to data domain
-  xScale.domain([d3.min(data, xValue)-1, d3.max(data, xValue)+1]);
-  yScale.domain([d3.min(data, yValue)-1, d3.max(data, yValue)+1]);
+    // don't want dots overlapping axis, so add in buffer to data domain
+    xScale.domain([d3.min(data, xValue) - 1, d3.max(data, xValue) + 1]);
+    yScale.domain([d3.min(data, yValue) - 1, d3.max(data, yValue) + 1]);
 
-  // draw dots
-  svg.selectAll(".dot")
-      .data(data)
-    .enter().append("text")
-      .attr("class", "dot")
-      .attr("x", xMap)
-      .attr("y", yMap)
-      .text(function(d){ return +d["name"] + 62;})
-      .style("fill", function(d) { return color(cValue(d));}) 
-      .on("mouseover", function(d) {
+    // draw dots
+    svg.selectAll(".noFilter")
+        .data(data)
+        .enter().append("text")
+        .attr("class", "noFilter")
+        .attr("x", xMap)
+        .attr("y", yMap)
+        .text(function (d) { return +d["name"] + 62; })
+        .style("fill", function (d) { return color(cValue(d)); })
+        .on("mouseover", function (d) {
 
-        var matrix = this.getScreenCTM()
-                .translate(+this.getAttribute("x"),
-                         +this.getAttribute("y"));
-        	tooltip.transition()
-               	.duration(500)
-               	.style("opacity", 1);
-          	tooltip.html(d["text"])
-              .style("left", (window.pageXOffset + matrix.e + 30) + "px")
-            .style("top", (window.pageYOffset + matrix.f - 20) + "px");
-            // specify selceted circle
-			d3.select(this).attr("class", "selected")
-				.transition(200)
-				.style("font-size", 14)
-				.style("opacity", 1);
-			d3.selectAll(".dot").transition()
-				.duration(200)
-				.style("opacity", 0.17);
+          // specify selected circle
+          var selectClass = d3.select(this).attr('class');
 
-      })
-      .on("mouseout", function(d) {
+          // Add tooltip
+          if ((selectClass == "inFilter") || (selectClass == "noFilter")) {
+            var matrix = this.getScreenCTM()
+                .translate(+this.getAttribute("x"), +this.getAttribute("y"));
+            tooltip.transition()
+                .duration(500)
+                .style("opacity", 1);
+            tooltip.html(d["text"])
+                .style("left", (window.pageXOffset + matrix.e + 30) + "px")
+                .style("top", (window.pageYOffset + matrix.f - 20) + "px");
+          }
 
-          	tooltip.transition()
-               	.duration(100)
-               	.style("opacity", 0);
-            d3.select(this)
-            	.attr("class", "dot");
-			d3.selectAll(".dot").transition()
-				.duration(1000)
-				.style("opacity", 1)
-        .style("font-size", 12);
-      });
+          d3.select(this)
+              .attr("class",
+                function (d) {
+                  return ((selectClass == "inFilter") || (selectClass == "noFilter") ? "selected" : selectClass);
+                })
+              .attr("id", selectClass)
+          d3.selectAll(".selected")
+              .transition(200)
+              .style("font-size", 14)
+              .style("opacity", 1);
+          d3.selectAll(".noFilter").transition()
+              .duration(200)
+              .style("opacity", oSmall);
+          d3.selectAll(".inFilter").transition()
+              .duration(200)
+              .style("opacity", 0.65)
+              .style("font-size", 12);
+    })
+        .on("mouseout", function (d) {
+          // ditch tool tips
+          tooltip.transition()
+              .duration(100)
+              .style("opacity", 0);
+
+          // change selected back to original class
+          var selectClass = d3.select(this).attr('id');
+          d3.select(this)
+            .attr("class", selectClass);
+          d3.selectAll(".noFilter").transition()
+              .duration(400)
+              .style("opacity", 1)
+              .style("font-size", 12);
+          d3.selectAll(".inFilter").transition()
+              .duration(400)
+              .style("opacity", 1)
+              .style("font-size", 12);
+    });
 
 });
 
@@ -162,6 +188,26 @@ $(window).resize(function () {
       //...
     }, 300, "azerbaijan");
 });
+
+$( "#search" ).keyup(function() {
+  var value = this.value;
+  //console.log(value);
+
+  d3.selectAll("text")
+        .attr("class", 
+          function(d) { 
+            var num = +d["name"] + 62;
+            num = num.toString();
+            return ( (num.search(value) >= 0)||(d["text"].search(value) >= 0) ? "inFilter" : "outFilter"); 
+          });
+  d3.selectAll(".inFilter")
+    .style("opacity", 1)
+  d3.selectAll(".outFilter")
+    .style("opacity", oSmall)
+      
+
+});
+
 
 </script>
 </body>
