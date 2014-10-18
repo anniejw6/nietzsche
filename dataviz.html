@@ -3,62 +3,69 @@
 <meta charset="utf-8">
 <head>
 <!-- Based on http://bl.ocks.org/weiglemc/6185069 -->
+<!-- http://stackoverflow.com/questions/2854407/javascript-jquery-window-resize-how-to-fire-after-the-resize-is-completed -->
+<!-- http://stackoverflow.com/questions/21153074/d3-positioning-tooltip-on-svg-element-not-working -->
 <title> Mapping Nietzsche </title>
 <style>
+
+html {
+    margin-left: 12.5%;
+    margin-right:12.5%;
+    margin-bottom:50px;
+    margin-top:10px;
+    background-color: white;
+}
+
 body {
-  font: 12px sans-serif;
+    font: 12px sans-serif;
 }
 
-.axis path,
-.axis line {
-  fill: none;
-  stroke: #000;
-  shape-rendering: crispEdges;
+svg {
+  display: block;
+  margin: 0 auto;
+  background-color:#F6F6F5;
 }
-
-.dot {
-   stroke: #FFF;
-}
-
 .tooltip {
   position: absolute;
   width: 200px;
   height: 28px;
   pointer-events: none;
+  font: 11px sans-serif;
+  font-color: 'green';
 }
+
 </style>
 <script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
 </head>
 <body>
 <h1>Mapping Nietzsche</h1>
 
-In Chapter 4 of <em>Beyond Good and Evil</em>, Friedrich Nietzsche offers the reader a list of 123 "epigrams and interludes." 
+<p>In <em>Beyond Good and Evil</em>, Friedrich Nietzsche includes a list of one hundred and twenty-three "Epigrams and Interludes." This graph shows those aphorisms mapped onto a two-dimensonal space. The coordinates are arbitrary, but the distance between each of the points indicates their similarity. The color of each aphorism (represented by its number) represents the cluster to which it belongs. Move your mouse over the number to display the full text of the aphorism.</p>
 
 <div class = 'container'> </div>
-<script>
-var margin = {top: 20, right: 20, bottom: 30, left: 40},
-    width = 960 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
 
-var rsize = 5;
-/* 
- * value accessor - returns the value to encode for a given data object.
- * scale - maps value to a visual display encoding, such as a pixel position.
- * map function - maps from data value to display value
- * axis - sets up axis
- */ 
+<h4>Methodology</h4>
+<p>I began by parsing each aphorism and creating a word-frequency matrix, in which each row is an aphorism, each column a word, and each cell the number of times the word appears in the aphorism. Then, I calculate the tf-idf (term frequency–inverse document frequency), which measures the frequency of the word in each aphorism inversely weighted by how many times the word appears across all of the aphorisms. This results in a 123 x 633 matrix of aphorisms and words. I applied t-SNE (t-distributed stochastic neighbors embedding) for dimensonality reduction and used hiearchical clustering to create the colored groups.</p>
+
+<h4>Sources</h4>
+<p>I used the R packages <a href = 'http://cran.r-project.org/web/packages/tm/index.html'><code>tm</code></a> for parsing and <a href = 'http://cran.r-project.org/web/packages/tsne/index.html'><code>tsne</code></a> for dimensonality reduction. The list of aphorisms can be found at <a href = 'http://users.compaqnet.be/cn127103/Nietzsche_beyond_good_and_evil/bge_ch4_maxims-and-interludes.htm'>Nietzsche's Features</a>, which might be the only instance of a Nietzsche bibliography displayed in Comic Sans. Code and data are available on <a href = 'https://github.com/anniejw6/nietzsche'>GitHub</a>.</p>
+
+<script>
+var margin = {top: 30, right: 40, bottom: 30, left: 20},
+    width = parseInt(d3.select('div.container').style('width'), 10),
+    width = width - margin.left - margin.right,
+    height = 0.625 * width - margin.top - margin.bottom;
 
 // setup x 
 var xValue = function(d) { return d.X1;}, // data -> value
     xScale = d3.scale.linear().range([0, width]), // value -> display
-    xMap = function(d) { return xScale(xValue(d));}, // data -> display
-    xAxis = d3.svg.axis().scale(xScale).orient("bottom");
+    xMap = function(d) { return xScale(xValue(d));}; // data -> display
 
 // setup y
 var yValue = function(d) { return d.X2;}, // data -> value
     yScale = d3.scale.linear().range([height, 0]), // value -> display
-    yMap = function(d) { return yScale(yValue(d));}, // data -> display
-    yAxis = d3.svg.axis().scale(yScale).orient("left");
+    yMap = function(d) { return yScale(yValue(d));}; // data -> display
 
 // setup fill color
 var cValue = function(d) { return d.clust10;},
@@ -91,72 +98,69 @@ d3.csv("results.csv", function(error, data) {
   xScale.domain([d3.min(data, xValue)-1, d3.max(data, xValue)+1]);
   yScale.domain([d3.min(data, yValue)-1, d3.max(data, yValue)+1]);
 
-//  // x-axis
-//  svg.append("g")
-//      .attr("class", "x axis")
-//      .attr("transform", "translate(0," + height + ")")
-//      .call(xAxis)
-//    .append("text")
-//      .attr("class", "label")
-//      .attr("x", width)
-//      .attr("y", -6)
-//      .style("text-anchor", "end")
-//      .text("X1");
-//
-//  // y-axis
-//  svg.append("g")
-//      .attr("class", "y axis")
-//      .call(yAxis)
-//    .append("text")
-//      .attr("class", "label")
-//      .attr("transform", "rotate(-90)")
-//      .attr("y", 6)
-//      .attr("dy", ".71em")
-//      .style("text-anchor", "end")
-//      .text("Protein (g)");
-
   // draw dots
   svg.selectAll(".dot")
       .data(data)
-    .enter().append("circle")
+    .enter().append("text")
       .attr("class", "dot")
-      .attr("r", rsize)
-      .attr("cx", xMap)
-      .attr("cy", yMap)
+      .attr("x", xMap)
+      .attr("y", yMap)
+      .text(function(d){ return +d["name"] + 62;})
       .style("fill", function(d) { return color(cValue(d));}) 
       .on("mouseover", function(d) {
+
+        var matrix = this.getScreenCTM()
+                .translate(+this.getAttribute("x"),
+                         +this.getAttribute("y"));
         	tooltip.transition()
                	.duration(500)
                	.style("opacity", 1);
-          	tooltip.html(d["text"] + " (" + (+d["name"] + 62) + ")")
-               	.style("left", (parseInt(d3.select(this).attr("cx")) + 60) + "px")
-               	.style("top", (d3.event.pageY - 28) + "px");
+          	tooltip.html(d["text"])
+              .style("left", (window.pageXOffset + matrix.e + 30) + "px")
+            .style("top", (window.pageYOffset + matrix.f - 20) + "px");
             // specify selceted circle
 			d3.select(this).attr("class", "selected")
 				.transition(200)
-				.attr("r", 7)
+				.style("font-size", 14)
 				.style("opacity", 1);
 			d3.selectAll(".dot").transition()
-				.duration(500)
+				.duration(200)
 				.style("opacity", 0.17);
 
       })
       .on("mouseout", function(d) {
+
           	tooltip.transition()
                	.duration(100)
                	.style("opacity", 0);
             d3.select(this)
-            	.attr("class", "dot")
-            	.attr("r", rsize);
+            	.attr("class", "dot");
 			d3.selectAll(".dot").transition()
 				.duration(1000)
-				.style("opacity", 1);
-    //     	svg.selectAll(".dot").transition()
-    //			.duration(500)
-    //			.style("opacity", 1);
+				.style("opacity", 1)
+        .style("font-size", 12);
       });
 
+});
 
+var waitForFinalEvent = (function () {
+  var timers = {};
+  return function (callback, ms, uniqueId) {
+    if (!uniqueId) {
+      uniqueId = "Don't call this twice without a uniqueId";
+    }
+    if (timers[uniqueId]) {
+      clearTimeout (timers[uniqueId]);
+    }
+    timers[uniqueId] = setTimeout(callback, ms);
+  };
+})();
+
+$(window).resize(function () {
+    waitForFinalEvent(function(){
+      location.reload();
+      //...
+    }, 300, "azerbaijan");
 });
 
 </script>
