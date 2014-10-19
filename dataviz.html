@@ -26,12 +26,16 @@ svg {
   background-color:#F6F6F5;
 }
 
-.tooltip {
-  position: absolute;
-  height: 150px;
+.htmlLabel {
   width: 175px;
-  pointer-events: none;
-  font: 11px sans-serif;
+  border: solid;
+}
+.htmlLabel p {
+    margin: 0;
+}
+.bar-label {
+    font: 11px sans-serif;
+    text-align: center;
 }
 
 </style>
@@ -63,6 +67,9 @@ var width = parseInt(d3.select('div.container').style('width'), 10),
     width = width - margin.left - margin.right,
     height = 0.625 * width - margin.top - margin.bottom;
 
+var toolWidth = 300,
+    toolHeight = 100;
+
 // setup x 
 var xValue = function(d) { return d.X1;}, // data -> value
     xScale = d3.scale.linear().range([0, width]), // value -> display
@@ -88,6 +95,8 @@ var svg = d3.select("div.container").append("svg")
 var tooltip = d3.select("body").append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
+var toolText = d3.select("div.tooltip").append("div")
+    .attr("class", "tooltip-text");
 
 // load data
 d3.csv("results.csv", function (error, data) {
@@ -121,12 +130,41 @@ d3.csv("results.csv", function (error, data) {
           if ((selectClass == "inFilter") || (selectClass == "noFilter")) {
             var matrix = this.getScreenCTM()
                 .translate(+this.getAttribute("x"), +this.getAttribute("y"));
-            tooltip.transition()
-                .duration(500)
-                .style("opacity", 1);
-            tooltip.html(d["text"])
-                .style("left", (window.pageXOffset + matrix.e + 30) + "px")
-                .style("top", (window.pageYOffset + matrix.f - 20) + "px");
+//            tooltip.transition()
+//                .duration(500)
+//                .style("opacity", 1);
+//           tooltip
+//                .style("left", (window.pageXOffset + matrix.e + 30) + "px")
+//                .style("top", (window.pageYOffset + matrix.f - 20) + "px");
+//            toolText.html(d["text"]);
+            var xPosition = parseFloat(d3.select(this).attr("x"));
+            var yPosition = parseFloat(d3.select(this).attr("y"));
+
+            d3.select("svg").append("g")
+              .attr("id", "tooltip")
+              .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            labels = d3.select("#tooltip");
+
+            textNodes = labels.selectAll("foreignObject").data(data);
+
+            foreignObjects = labels.append("foreignObject")
+                .attr("x", xPosition)
+                .attr("y", yPosition)
+                .attr("width", toolWidth)
+                .attr("height", toolHeight);
+
+            htmlDOMs = foreignObjects.append("xhtml:body")
+                .style("margin",0)
+                .style("padding",0);
+
+            htmlLabels = htmlDOMs.append("div")
+                .attr("class","htmlLabel")
+                .attr("width", toolWidth);
+
+            htmlLabels.append("p")
+                .attr("class","bar-label")
+                .text(d["text"])
           }
 
           d3.select(this)
@@ -148,10 +186,8 @@ d3.csv("results.csv", function (error, data) {
               .style("font-size", 12);
     })
         .on("mouseout", function (d) {
-          // ditch tool tips
-          tooltip.transition()
-              .duration(100)
-              .style("opacity", 0);
+
+         // d3.select("#tooltip").remove();
 
           // change selected back to original class
           var selectClass = d3.select(this).attr('id');
