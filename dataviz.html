@@ -42,7 +42,7 @@ svg {
 <p>In <em>Beyond Good and Evil</em>, Friedrich Nietzsche includes a list of one hundred and twenty-three "Epigrams and Interludes." This graph shows those aphorisms mapped onto a two-dimensonal space. The coordinates are arbitrary, but the distance between each of the points indicates their similarity. The color of each aphorism (represented by its number) represents the cluster to which it belongs. Move your mouse over the number to display the full text of the aphorism.</p>
 
 <div id="search_section" class="control">
-<p class="search_title">Search <input type="text" class="text-input" id="search" value=""/></p>
+<p class="search_title">Search <input placeholder="vanity" type="text" class="text-input" id="search" value=""/></p>
 </div>
 
 <div class = 'container'> </div>
@@ -59,7 +59,7 @@ var oSmall = 0.17
 var width = parseInt(d3.select('div.container').style('width'), 10),
     margin = {top: width * 0.05, right: width * 0.05, bottom: width * 0.05, left: width * 0.025},
     width = width - margin.left - margin.right,
-    height = 0.625 * width - margin.top - margin.bottom;
+    height = 0.6 * width - margin.top - margin.bottom;
 
 // setup x 
 var xValue = function(d) { return d.X1;}, // data -> value
@@ -119,7 +119,7 @@ d3.csv("results.csv", function (error, data) {
           if ((selectClass == "inFilter") || (selectClass == "noFilter")) {
             var x = d3.select(this).attr("x");
             var w = width + margin.left + margin.right;
-            
+
             var matrix = this.getScreenCTM()
                 .translate(+this.getAttribute("x"), +this.getAttribute("y"));
             tooltip
@@ -128,14 +128,14 @@ d3.csv("results.csv", function (error, data) {
                 .style("opacity", 1);
             tooltip.html(d["text"])
                 .style("left", (window.pageXOffset + matrix.e + 30) + "px")
-                .style("top", (window.pageYOffset + matrix.f - 20) + "px")
+                .style("top", (window.pageYOffset + matrix.f - 40) + "px")
                 .style("width", function(d){
                   var l = tooltip.html().length;
-                  console.log(x);
-                  console.log(w);
-                  console.log(l);
-                  if (x < w/2 && l > 100){
-                    return "20%"
+                 // console.log(x);
+                 // console.log(w);
+                //  console.log(l);
+                  if (x < (w * 0.75)){
+                    return ( l > 100 ? "20%" : "15%")
                   } else {
                     return "10%"
                   }
