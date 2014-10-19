@@ -27,11 +27,9 @@ svg {
 }
 
 .tooltip {
+  width: 10%;
   position: absolute;
-  height: 150px;
-  width: 175px;
-  pointer-events: none;
-  font: 11px sans-serif;
+  font: 10px sans-serif;
 }
 
 </style>
@@ -119,14 +117,29 @@ d3.csv("results.csv", function (error, data) {
 
           // Add tooltip
           if ((selectClass == "inFilter") || (selectClass == "noFilter")) {
+            var x = d3.select(this).attr("x");
+            var w = width + margin.left + margin.right;
+            
             var matrix = this.getScreenCTM()
                 .translate(+this.getAttribute("x"), +this.getAttribute("y"));
-            tooltip.transition()
+            tooltip
+              .transition()
                 .duration(500)
                 .style("opacity", 1);
             tooltip.html(d["text"])
                 .style("left", (window.pageXOffset + matrix.e + 30) + "px")
-                .style("top", (window.pageYOffset + matrix.f - 20) + "px");
+                .style("top", (window.pageYOffset + matrix.f - 20) + "px")
+                .style("width", function(d){
+                  var l = tooltip.html().length;
+                  console.log(x);
+                  console.log(w);
+                  console.log(l);
+                  if (x < w/2 && l > 100){
+                    return "20%"
+                  } else {
+                    return "10%"
+                  }
+                });
           }
 
           d3.select(this)
@@ -136,7 +149,8 @@ d3.csv("results.csv", function (error, data) {
                 })
               .attr("id", selectClass)
           d3.selectAll(".selected")
-              .transition(200)
+              .transition()
+              .duration(200)
               .style("font-size", 14)
               .style("opacity", 1);
           d3.selectAll(".noFilter").transition()
@@ -144,13 +158,13 @@ d3.csv("results.csv", function (error, data) {
               .style("opacity", oSmall);
           d3.selectAll(".inFilter").transition()
               .duration(200)
-              .style("opacity", 0.65)
+              .style("opacity", 0.5)
               .style("font-size", 12);
     })
         .on("mouseout", function (d) {
           // ditch tool tips
           tooltip.transition()
-              .duration(100)
+              .duration(400)
               .style("opacity", 0);
 
           // change selected back to original class
@@ -191,20 +205,26 @@ $(window).resize(function () {
 
 $( "#search" ).keyup(function() {
   var value = this.value;
-  //console.log(value);
+//  console.log(isNaN(value));
 
   d3.selectAll("text")
         .attr("class", 
           function(d) { 
+
+            if(value.toString().length == 0){
+              return ("noFilter")
+            } else {
             var num = +d["name"] + 62;
             num = num.toString();
             return ( (num.search(value) >= 0)||(d["text"].search(value) >= 0) ? "inFilter" : "outFilter"); 
+            }
           });
   d3.selectAll(".inFilter")
-    .style("opacity", 1)
+    .style("opacity", 1);
   d3.selectAll(".outFilter")
-    .style("opacity", oSmall)
-      
+    .style("opacity", oSmall);
+  d3.selectAll(".noFilter")
+    .style("opacity", 1);
 
 });
 
