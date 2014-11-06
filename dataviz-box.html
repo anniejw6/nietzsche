@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<head>
+<!-- Based on http://bl.ocks.org/weiglemc/6185069 -->
+<!-- http://stackoverflow.com/questions/2854407/javascript-jquery-window-resize-how-to-fire-after-the-resize-is-completed -->
+
+<title> Mapping Nietzsche </title>
+<style>
+
+html {
+    margin-left: 12.5%;
+    margin-right:12.5%;
+    margin-bottom:50px;
+    margin-top:10px;
+    background-color: white;
+}
+
+body {
+    font: 12px sans-serif;
+}
+
+p {
+  color: grey;
+}
+svg {
+  display: block;
+  margin: 0 auto;
+  background-color:#F6F6F5;
+}
+
+.tooltip {
+  pointer-events: none;
+  width: 10%;
+  position: absolute;
+  font: 10px sans-serif;
+}
+
+.graphic {
+    white-space:nowrap;
+    text-align:center;
+    width: 100%;
+    margin: auto;
+}
+
+.plot {
+    width: 70%;
+    display:inline-block;
+    border-radius:5px;
+    vertical-align: top;
+    cursor: default;
+}
+
+.tool {
+    width: 25%;
+    display:inline-block;
+    border-radius:15px;
+    vertical-align: top;
+    white-space: normal;
+}
+
+.toolText {
+  padding:10%;
+  text-align:left;
+}
+
+.outFilter{
+  pointer-events: none;
+}
+
+.num{
+  margin-bottom:20px;
+}
+
+.eng {
+  margin-bottom:20px;
+  color: black;
+
+}
+
+.ger {
+  margin-bottom:20px;
+  color:black;
+    font-style: italic;
+}
+
+.control p{
+  color: black;
+}
+
+</style>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+</head>
+<body>
+<h1>Mapping Nietzsche</h1>
+
+<p>In <em>Beyond Good and Evil</em>, Friedrich Nietzsche includes a list of one hundred and twenty-three "Epigrams and Interludes." This graph maps them onto a two-dimensonal space. The coordinates are arbitrary, but distance reflects similarity and color clustering. Hover over the points to display the text of the aphorism, or search by keyword or number.</p>
+
+<div id="search_section" class="control">
+<p class="search_title">Search <input placeholder="woman" type="text" class="text-input" id="search" value=""/></p>
+</div>
+<div class = 'graphic'>
+    <div class = 'plot'> </div>
+    <div class = 'tool'>
+      <div class = 'toolText'>
+      <h1 class = 'num'> </h1>
+      <p class = 'ger'> </p>
+      <p class = 'eng'> </p>
+    </div>
+    </div>
+</div>
+
+</br>
+</br>
+<h4>How to Build It</h4>
+<p>I started by creating a list of aphorisms in the original German. Then, I parsed them to create a word-frequency matrix (each row is an aphorism, each column a word, and each cell the number of times the word appears in the aphorism). I calculated the tf-idf (term frequency–inverse document frequency), which measures the frequency of the word in each aphorism inversely weighted by how many times the word appears across all of the aphorisms. Finally, I applied t-SNE (t-distributed stochastic neighbors embedding) for dimensonality reduction and generated hiearchical clusters.</p>
+
+<h4>Sources</h4>
+<p>I used the R packages <a href = 'http://cran.r-project.org/web/packages/tm/index.html'><code>tm</code></a> for parsing and <a href = 'http://cran.r-project.org/web/packages/tsne/index.html'><code>tsne</code></a> for dimensonality reduction. The text was provided by <a href = 'http://www.gutenberg.org/ebooks/7204'>Project Gutenberg</a>. Code and data are available on <a href = 'https://github.com/anniejw6/nietzsche'>GitHub</a>. Thanks to Ben and Drew for pushing me to create this using the original German.</p>
+
+
+<script>
+
+var oSmall = 0.17
+
+var width = parseInt(d3.select('div.plot').style('width'), 10),
+    margin = {top: width * 0.05, right: width * 0.05, bottom: width * 0.05, left: width * 0.025},
+    width = width - margin.left - margin.right,
+    height = 0.75 * width - margin.top - margin.bottom;
+
+// setup x 
+var xValue = function(d) { return d.X1;}, // data -> value
+    xScale = d3.scale.linear().range([0, width]), // value -> display
+    xMap = function(d) { return xScale(xValue(d));}; // data -> display
+
+// setup y
+var yValue = function(d) { return d.X2;}, // data -> value
+    yScale = d3.scale.linear().range([height, 0]), // value -> display
+    yMap = function(d) { return yScale(yValue(d));}; // data -> display
+
+// setup fill color
+var cValue = function(d) { return d.clust15;},
+    color = d3.scale.category10();
+
+// add the graph canvas to the body of the webpage
+var svg = d3.select("div.plot").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  	.append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+// setup font sizes
+var fSize = function(w){
+  if(w > 650){
+    return 14
+  } else {
+    return 12
+  };
+};
+
+// add the tooltip area to the webpage
+var tooltip = d3.selectAll("div.tool");
+
+// load data
+d3.csv("results_gr.csv", function (error, data) {
+
+    // change string (from CSV) into number format
+    data.forEach(function (d) {
+        d.X1 = +d.X1;
+        d.X2 = +d.X2;
+        //  console.log(d);
+    });
+
+    // don't want dots overlapping axis, so add in buffer to data domain
+    xScale.domain([d3.min(data, xValue) - 1, d3.max(data, xValue) + 1]);
+    yScale.domain([d3.min(data, yValue) - 1, d3.max(data, yValue) + 1]);
+
+    // draw dots
+    svg.selectAll(".noFilter")
+        .data(data)
+        .enter().append("text")
+        .attr("class", "noFilter")
+        .attr("x", xMap)
+        .attr("y", yMap)
+        .text(function (d) { return +d["name"] + 62; })
+        .style("font-size", fSize(width))
+        .style("fill", function (d) { return color(cValue(d)); })
+        .on("mouseover", function (d) {
+
+          // specify selected circle
+          var selectClass = d3.select(this).attr('class');
+
+          // Add tooltip
+          if ((selectClass == "inFilter") || (selectClass == "noFilter")) {
+
+            tooltip
+                .style("font-size", fSize(width) + "px")
+                .style("opacity", 0.75)
+              .transition()
+                .duration(400)
+                .style("opacity", 1);
+
+            tooltip
+              .select("h1.num")
+              .html(+d["name"] + 62);
+            tooltip
+              .select("p.eng")
+              .html(d["text"]);
+            tooltip
+              .select("p.ger")
+              .html(d["textgr"]);
+          }
+
+          d3.select(this)
+              .attr("class",
+                function (d) {
+                  return ((selectClass == "inFilter") || (selectClass == "noFilter") ? "selected" : selectClass);
+                })
+              .attr("id", selectClass)
+          d3.selectAll(".selected")
+              .transition()
+              .duration(200)
+              .style("font-size", fSize(width) + 2)
+              .style("opacity", 1);
+          d3.selectAll(".noFilter").transition()
+              .duration(200)
+              .style("opacity", oSmall);
+          d3.selectAll(".inFilter").transition()
+              .duration(200)
+              .style("opacity", 0.5)
+              .style("font-size", fSize(width));
+    })
+        .on("mouseout", function (d) {
+
+          // change selected back to original class
+          var selectClass = d3.select(this).attr('id');
+          d3.select(this)
+            .attr("class", selectClass);
+          d3.selectAll(".noFilter").transition()
+              .duration(400)
+              .style("opacity", 1)
+              .style("font-size", fSize(width));
+          d3.selectAll(".inFilter").transition()
+              .duration(400)
+              .style("opacity", 1)
+              .style("font-size", fSize(width));
+    });
+
+});
+
+var waitForFinalEvent = (function () {
+  var timers = {};
+  return function (callback, ms, uniqueId) {
+    if (!uniqueId) {
+      uniqueId = "Don't call this twice without a uniqueId";
+    }
+    if (timers[uniqueId]) {
+      clearTimeout (timers[uniqueId]);
+    }
+    timers[uniqueId] = setTimeout(callback, ms);
+  };
+})();
+
+$(window).resize(function () {
+    tooltip
+      .style("opacity", 0);
+
+    waitForFinalEvent(function(){
+      location.reload();
+      //...
+    }, 300, "azerbaijan");
+});
+
+$( "#search" ).keyup(function() {
+  var value = this.value;
+//  console.log(isNaN(value));
+
+  d3.selectAll("text")
+        .attr("class", 
+          function(d) { 
+
+            if(value.toString().length == 0){
+              return ("noFilter")
+            } else {
+            var num = +d["name"] + 62;
+            num = num.toString();
+            var eng = d["text"].toLowerCase();
+            var ger = d["textgr"].toLowerCase();
+            return ( (num.search(value) >= 0)||(eng.search(value) >= 0)||(ger.search(value) >= 0) ? "inFilter" : "outFilter"); 
+            }
+          });
+  d3.selectAll(".inFilter")
+    .style("opacity", 1);
+  d3.selectAll(".outFilter")
+    .style("opacity", oSmall);
+  d3.selectAll(".noFilter")
+    .style("opacity", 1);
+
+});
+
+
+</script>
+</body>
+</html>
